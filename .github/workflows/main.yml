@@ -1,11 +1,50 @@
-- name: Unzip project (skip .github)
-  shell: bash
-  run: |
-    mkdir extracted
-    unzip -o FloorFit_Enhanced.zip -d extracted
-    shopt -s dotglob
-    # usuń .github z rozpakowanego ZIP-a, żeby nie nadpisać workflowa
-    rm -rf extracted/FloorFit_Enhanced/.github
-    # przenieś resztę plików na poziom repo
-    mv extracted/FloorFit_Enhanced/* .
-    rm -rf extracted
+name: Build APK from ZIP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # ⬇️ Rozpakuj ZIP i POMIŃ .github, żeby nie nadpisać workflowa
+      - name: Unzip project (skip .github)
+        shell: bash
+        run: |
+          set -e
+          if [ ! -f "FloorFit_Enhanced.zip" ]; then
+            echo "❌ Nie znaleziono pliku FloorFit_Enhanced.zip w katalogu głównym repozytorium."
+            exit 1
+          fi
+          mkdir extracted
+          unzip -o FloorFit_Enhanced.zip -d extracted
+          shopt -s dotglob
+          # usuń .github z rozpakowanego projektu (tam też był workflow)
+          rm -rf extracted/FloorFit_Enhanced/.github
+          # przenieś całą zawartość projektu do root repo
+          mv extracted/FloorFit_Enhanced/* .
+          rm -rf extracted
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.7
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FloorFit-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
