@@ -1,33 +1,61 @@
 name: Build APK from ZIP
-
 on:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Unzip project (skip .github)
+      # 1) Znajdź pierwszy ZIP w repo i rozpakuj go
+      - name: Find & unzip project (skip .github)
         shell: bash
         run: |
           set -e
-          echo "📦 Rozpakowuję projekt..."
-          if [ ! -f "FloorFit_Enhanced_v2.zip" ]; then
-            echo "❌ Nie znaleziono pliku FloorFit_Enhanced_v2.zip"
+          ZIP_FILE=$(ls -1 *.zip | head -n1 || true)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "❌ Brak pliku .zip w repo."
             exit 1
           fi
+          echo "➡️ Używam ZIP: $ZIP_FILE"
           mkdir extracted
-          unzip -o FloorFit_Enhanced_v2.zip -d extracted
+          unzip -o "$ZIP_FILE" -d extracted
+          ROOT_DIR=$(ls -1 extracted | head -n1)
+          echo "➡️ ROOT_DIR: $ROOT_DIR"
+          # nie nadpisuj obecnego workflowa
+          rm -rf "extracted/$ROOT_DIR/.github"
           shopt -s dotglob
-          rm -rf extracted/FloorFit_Enhanced/.github
-          mv extracted/FloorFit_Enhanced/* .
+          mv "extracted/$ROOT_DIR"/* .
           rm -rf extracted
-          echo "✅ Projekt rozpakowany pomyślnie!"
+          echo "✅ Rozpakowano."
 
+      # 2) Zapisz poprawny settings.gradle.kts (z repozytoriami Google + Maven Central)
+      - name: Patch settings.gradle.kts
+        shell: bash
+        run: |
+          cat > settings.gradle.kts <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "FloorFit"
+          include(":app")
+          EOF
+          echo "✅ Nadpisano settings.gradle.kts"
+
+      # 3) JDK + Gradle
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -39,9 +67,11 @@ jobs:
         with:
           gradle-version: 8.7
 
+      # 4) Build APK
       - name: Build debug APK
         run: gradle :app:assembleDebug
 
+      # 5) Artefakt do pobrania
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
