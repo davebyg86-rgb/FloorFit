@@ -8,14 +8,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip project
-        shell: bash
-        run: |
-          unzip -o FloorFit_Enhanced.zip
-          shopt -s dotglob
-          mkdir temp && mv FloorFit_Enhanced/* temp/ || true
-          mv temp/* . || true
-          rm -rf FloorFit_Enhanced temp
+      - name: Unzip project (skip .github)
+  shell: bash
+  run: |
+    mkdir extracted
+    unzip -o FloorFit_Enhanced.zip -d extracted
+    shopt -s dotglob
+    # usuń .github z rozpakowanego ZIP-a, żeby nie nadpisać workflowa
+    rm -rf extracted/FloorFit_Enhanced/.github
+    # przenieś resztę plików na poziom repo
+    mv extracted/FloorFit_Enhanced/* .
+    rm -rf extracted
+
 
       - name: Set up JDK
         uses: actions/setup-java@v4
