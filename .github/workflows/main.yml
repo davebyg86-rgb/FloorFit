@@ -1,0 +1,11 @@
+- name: Unzip project (skip .github)
+  shell: bash
+  run: |
+    mkdir extracted
+    unzip -o FloorFit_Enhanced.zip -d extracted
+    shopt -s dotglob
+    # usuń .github z rozpakowanego ZIP-a, żeby nie nadpisać workflowa
+    rm -rf extracted/FloorFit_Enhanced/.github
+    # przenieś resztę plików na poziom repo
+    mv extracted/FloorFit_Enhanced/* .
+    rm -rf extracted
