@@ -1,25 +1,32 @@
 name: Build APK from ZIP
+
 on:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Unzip project (skip .github)
-  shell: bash
-  run: |
-    mkdir extracted
-    unzip -o FloorFit_Enhanced.zip -d extracted
-    shopt -s dotglob
-    # usuń .github z rozpakowanego ZIP-a, żeby nie nadpisać workflowa
-    rm -rf extracted/FloorFit_Enhanced/.github
-    # przenieś resztę plików na poziom repo
-    mv extracted/FloorFit_Enhanced/* .
-    rm -rf extracted
-
+        shell: bash
+        run: |
+          set -e
+          echo "📦 Rozpakowuję projekt..."
+          if [ ! -f "FloorFit_Enhanced_v2.zip" ]; then
+            echo "❌ Nie znaleziono pliku FloorFit_Enhanced_v2.zip"
+            exit 1
+          fi
+          mkdir extracted
+          unzip -o FloorFit_Enhanced_v2.zip -d extracted
+          shopt -s dotglob
+          rm -rf extracted/FloorFit_Enhanced/.github
+          mv extracted/FloorFit_Enhanced/* .
+          rm -rf extracted
+          echo "✅ Projekt rozpakowany pomyślnie!"
 
       - name: Set up JDK
         uses: actions/setup-java@v4
