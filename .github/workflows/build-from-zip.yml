@@ -13,8 +13,9 @@ jobs:
         run: |
           unzip -o FloorFit_Enhanced.zip
           shopt -s dotglob
-          mv FloorFit_Enhanced/* .
-          rm -rf FloorFit_Enhanced
+          mkdir temp && mv FloorFit_Enhanced/* temp/ || true
+          mv temp/* . || true
+          rm -rf FloorFit_Enhanced temp
 
       - name: Set up JDK
         uses: actions/setup-java@v4
